@@ -1,0 +1,83 @@
+x-app: &app
+  build: .
+  environment: &app-env
+    DATABASE_URL: postgres://drive:drive@postgres:5432/drive
+    REDIS_URL: redis://redis:6379/0
+    S3_ENDPOINT: http://object-storage:8333
+    S3_ACCESS_KEY: drive
+    S3_SECRET_KEY: drive-secret
+    JWT_SECRET: ${JWT_SECRET:-local-development-jwt-secret-0000}
+    BLOCK_ENCRYPTION_KEY: ${BLOCK_ENCRYPTION_KEY:-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+    create-buckets:
+      condition: service_completed_successfully
+
+services:
+  app1: *app
+  app2: *app
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app1
+      - app2
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: drive
+      POSTGRES_PASSWORD: drive
+      POSTGRES_DB: drive
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U drive -d drive"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  object-storage:
+    image: chrislusf/seaweedfs:4.51
+    command: server -dir=/data -ip.bind=0.0.0.0 -s3 -s3.port=8333 -s3.config=/etc/seaweedfs/s3.json
+    ports:
+      - "8333:8333"
+    volumes:
+      - ./docker/seaweedfs-s3.json:/etc/seaweedfs/s3.json:ro
+      - object-data:/data
+
+  create-buckets:
+    image: amazon/aws-cli:2.38.6
+    depends_on:
+      - object-storage
+    environment:
+      AWS_ACCESS_KEY_ID: drive
+      AWS_SECRET_ACCESS_KEY: drive-secret
+      AWS_DEFAULT_REGION: us-east-1
+      S3_ENDPOINT: http://object-storage:8333
+    volumes:
+      - ./docker/create-buckets.sh:/create-buckets.sh:ro
+    entrypoint: ["/bin/sh", "/create-buckets.sh"]
+
+volumes:
+  postgres-data:
+  object-data:

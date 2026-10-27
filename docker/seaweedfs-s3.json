@@ -1,0 +1,9 @@
+{
+  "identities": [
+    {
+      "name": "drive",
+      "credentials": [{ "accessKey": "drive", "secretKey": "drive-secret" }],
+      "actions": ["Admin", "Read", "List", "Tagging", "Write"]
+    }
+  ]
+}
