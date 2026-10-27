@@ -1,10 +1,25 @@
-.omc/
-node_modules/
-.next/
-out/
-coverage/
-.env
-.env*.local
-*.tsbuildinfo
+# dependencies
+/node_modules
+
+# next.js
+/.next/
+/out/
 next-env.d.ts
+*.tsbuildinfo
+
+# testing
+/coverage
+/test-results/
+/playwright-report/
+
+# env files
+.env*
+!.env.example
+
+# local agent state
+.omc/
+
+# misc
 .DS_Store
+*.pem
+npm-debug.log*

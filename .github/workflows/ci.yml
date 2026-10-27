@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  integration:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgres://drive:drive@localhost:55432/drive_test
+      REDIS_URL: redis://localhost:56379/0
+      S3_ENDPOINT: http://localhost:58333
+      S3_ACCESS_KEY: drive
+      S3_SECRET_KEY: drive-secret
+      JWT_SECRET: ci-integration-jwt-secret-000000000
+      BLOCK_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # SeaweedFS는 서비스 컨테이너로 실행 명령을 넘길 수 없어 compose로 띄운다
+      - run: docker compose -f docker-compose.test.yml up -d --wait postgres redis object-storage
+      - run: docker compose -f docker-compose.test.yml run --rm create-buckets
+      - run: npm run test:int
