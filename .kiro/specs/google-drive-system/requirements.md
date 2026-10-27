@@ -11,7 +11,7 @@
 
 프런트엔드와 백엔드는 하나의 Next.js(App Router, TypeScript) 애플리케이션으로 구현합니다. 웹 화면은 React 컴포넌트로,
 API_Server·Block_Server·Notification_Service는 Next.js Route Handler로 구현하되 모듈 경계를 나눠 책의 컴포넌트 구분을 유지합니다.
-실제 Amazon S3·S3 Glacier 대신 S3 호환 객체 저장소(MinIO)를 사용하고, 서로 다른 버킷으로 지역(region) 다중화와 아카이빙 저장소를 흉내 냅니다.
+실제 Amazon S3·S3 Glacier 대신 S3 호환 객체 저장소(SeaweedFS)를 사용하고, 서로 다른 버킷으로 지역(region) 다중화와 아카이빙 저장소를 흉내 냅니다.
 모바일 앱은 범위에서 제외하고, 브라우저 웹 클라이언트를 단말(Device)로 사용합니다. 브라우저 창(프로필)마다 별도 Device로 등록해 여러 단말 간 동기화를 시연합니다.
 여러 사용자가 같은 문서를 동시에 편집하는 협업 편집 기능은 범위에서 제외합니다.
 

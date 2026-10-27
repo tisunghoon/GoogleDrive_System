@@ -17,14 +17,14 @@ Next.js 16(App Router, TypeScript) 하나로 웹 화면과 API를 구현합니�
     - _Requirements: 3.8, 16.4_
 
   - [ ] 1.2 Docker Compose와 로드밸런서 구성
-    - `Dockerfile`(Next.js standalone 출력), `docker-compose.yml`에 app ×2, nginx, postgres:16, redis:7, minio, minio 버킷 초기화(`drive-region-a`, `drive-region-b`, `drive-cold`), jobs 서비스 정의
+    - `Dockerfile`(Next.js standalone 출력), `docker-compose.yml`에 app ×2, nginx, postgres:16, redis:7, SeaweedFS(S3 게이트웨이), aws-cli 버킷 초기화(`drive-region-a`, `drive-region-b`, `drive-cold`) 정의. jobs 서비스는 17.1에서 추가
     - `nginx.conf`: 두 app 인스턴스로 라운드로빈, 롱 폴링을 위해 `/api/notifications/poll`의 `proxy_read_timeout` 75초, `client_max_body_size` 5m
-    - `docker-compose.test.yml`: 통합 테스트용 postgres, redis, minio
+    - `docker-compose.test.yml`: 통합 테스트용 postgres, redis, SeaweedFS
     - `.env.example` 작성
     - _Requirements: 16.1, 16.4_
 
   - [ ] 1.3 CI 워크플로 구성
-    - `.github/workflows/ci.yml`: lint, typecheck, `vitest --project unit --project property` 잡과 postgres·redis·minio 서비스 컨테이너를 쓰는 `integration` 잡
+    - `.github/workflows/ci.yml`: lint, typecheck, `vitest --project unit --project property` 잡과 `docker-compose.test.yml`로 postgres·redis·SeaweedFS를 띄우는 `integration` 잡
     - _Requirements: 16.4_
 
 - [ ] 2. 메타데이터 DB 스키마와 마이그레이션
@@ -274,7 +274,7 @@ Next.js 16(App Router, TypeScript) 하나로 웹 화면과 API를 구현합니�
 
 - [ ] 18. 통합 테스트
   - [ ] 18.1 통합 테스트 기반 구성
-    - `tests/support/`: 테스트 DB 마이그레이션·초기화, MinIO 버킷 초기화, 사용자·단말 팩토리, Route Handler 호출 헬퍼
+    - `tests/support/`: 테스트 DB 마이그레이션·초기화, 객체 저장소 버킷 초기화, 사용자·단말 팩토리, Route Handler 호출 헬퍼
     - _Requirements: 16.4_
 
   - [ ] 18.2 DB 의존 속성 통합 테스트 작성

@@ -24,13 +24,13 @@
 | 메타데이터 DB | PostgreSQL 16 | ACID 트랜잭션, `SELECT ... FOR UPDATE`, 부분 유니크 인덱스, 트리거 |
 | ORM / 마이그레이션 | Drizzle ORM 0.45 + drizzle-kit, 드라이버 `postgres` | SQL에 가까운 쿼리, 타입 추론, SQL 마이그레이션 파일 생성 |
 | 캐시 / 알림 깨우기 | Redis 7 (`ioredis`) | 메타데이터 캐시, 롱 폴링 대기자를 깨우는 Pub/Sub |
-| 객체 저장소 | MinIO (`@aws-sdk/client-s3`) | S3 API 호환. 버킷 3개로 주 지역·복제 지역·아카이빙 저장소를 흉내 |
+| 객체 저장소 | SeaweedFS 4.51 (`@aws-sdk/client-s3`) | S3 API 호환. 버킷 3개로 주 지역·복제 지역·아카이빙 저장소를 흉내. MinIO는 Docker Hub 공식 이미지가 사라져 대체 |
 | 인증 | `jose`(JWT HS256), `bcryptjs` | 외부 인증 서버 없이 토큰 발급·검증 |
 | 입력 검증 | `zod` 4 | Route Handler 요청 바디·쿼리 스키마 검증 |
 | 브라우저 해시 | `hash-wasm` (증분 SHA-256), Web Crypto | 10GB 파일도 메모리에 다 올리지 않고 checksum 계산 |
 | 브라우저 로컬 사본 | IndexedDB (`idb`) | 블록 캐시, 파일별 동기화 상태, 이벤트 커서 저장 |
 | 테스트 | Vitest 5, fast-check 4, Playwright 1.64 | 단위·속성 테스트, 두 브라우저 컨텍스트로 다중 단말 E2E |
-| 실행 환경 | Docker Compose | app ×2, nginx, postgres, redis, minio, jobs |
+| 실행 환경 | Docker Compose | app ×2, nginx, postgres, redis, SeaweedFS, 버킷 초기화, jobs |
 
 > 구현 착수 시점에 각 패키지의 최신 안정판과 Next.js 16 문서(Route Handler, `proxy.ts`)를 다시 확인한다.
 
@@ -82,7 +82,7 @@ flowchart LR
 ```
 
 - 책의 오프라인 사용자 백업 큐는 PostgreSQL `events` 테이블(영속 이벤트 로그)과 단말별 커서로 구현한다. 근거는 아래 "알림과 오프라인 백업 큐 설계 결정"에 있다.
-- 책은 클라우드 저장소가 완료 콜백을 API 서버로 보낸다. MinIO 이벤트 알림 대신, Block_Server 모듈이 두 버킷 기록을 마친 뒤 API_Server 모듈의 `completeUpload()`를 직접 호출하는 것으로 대체한다. 같은 프로세스 안의 호출이지만 인터페이스(`UploadCompletionHandler`)로만 의존한다.
+- 책은 클라우드 저장소가 완료 콜백을 API 서버로 보낸다. 객체 저장소의 이벤트 알림 대신, Block_Server 모듈이 두 버킷 기록을 마친 뒤 API_Server 모듈의 `completeUpload()`를 직접 호출하는 것으로 대체한다. 같은 프로세스 안의 호출이지만 인터페이스(`UploadCompletionHandler`)로만 의존한다.
 
 ### 업로드 흐름 시퀀스 다이어그램
 
@@ -699,7 +699,7 @@ JSON 한 줄 로그(`level, time, requestId, route, userId, deviceId, status, du
 ### 이중 테스트 접근법
 
 **단위 테스트 + 속성 기반 테스트(PBT)**를 함께 쓴다. 단위 테스트는 구체적인 예와 경계값을, 속성 테스트는 위 23개 Property를 무작위 입력으로 검증한다.
-여기에 실제 PostgreSQL·Redis·MinIO를 쓰는 통합 테스트와, 브라우저 두 개로 다중 단말을 흉내 내는 E2E 테스트를 더한다.
+여기에 실제 PostgreSQL·Redis·SeaweedFS를 쓰는 통합 테스트와, 브라우저 두 개로 다중 단말을 흉내 내는 E2E 테스트를 더한다.
 
 ### 사용 라이브러리
 
@@ -742,7 +742,7 @@ test('Feature: google-drive-system, Property 2: 블록 인코딩 라운드트립
 
 ### 통합 테스트
 
-`docker compose -f docker-compose.test.yml up`으로 postgres, redis, minio를 띄운다.
+`docker compose -f docker-compose.test.yml up`으로 postgres, redis, SeaweedFS를 띄우고 버킷 초기화 컨테이너를 실행한다.
 
 - 업로드 → 다운로드 라운드트립, 델타 업로드 블록 수, 이어 올리기
 - 동시 완료 10건 충돌 판정
@@ -762,7 +762,7 @@ test('Feature: google-drive-system, Property 2: 블록 인코딩 라운드트립
 tests/
   unit/            # *.test.ts
   property/        # property-*.test.ts (DB 불필요한 속성)
-  integration/     # *.int.test.ts (실제 PostgreSQL·Redis·MinIO, DB 의존 속성 포함)
+  integration/     # *.int.test.ts (실제 PostgreSQL·Redis·SeaweedFS, DB 의존 속성 포함)
   support/         # 팩토리, 대역, 테스트 DB 초기화
 e2e/               # Playwright *.spec.ts
 ```
