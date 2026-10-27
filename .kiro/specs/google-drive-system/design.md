@@ -20,7 +20,7 @@
 | 영역 | 선택 | 이유 |
 |------|------|------|
 | 프레임워크 | Next.js 16 (App Router), React 19, TypeScript | 사용자 요청. 화면과 Route Handler를 한 코드베이스에서 관리 |
-| 런타임 | Node.js 22 (Route Handler는 `runtime = 'nodejs'`) | `node:zlib`, `node:crypto`, 장시간 롱 폴링 연결 필요 |
+| 런타임 | Node.js 22 (Route Handler 기본 런타임 `nodejs`) | `node:zlib`, `node:crypto`, 장시간 롱 폴링 연결 필요 |
 | 메타데이터 DB | PostgreSQL 16 | ACID 트랜잭션, `SELECT ... FOR UPDATE`, 부분 유니크 인덱스, 트리거 |
 | ORM / 마이그레이션 | Drizzle ORM 0.45 + drizzle-kit, 드라이버 `postgres` | SQL에 가까운 쿼리, 타입 추론, SQL 마이그레이션 파일 생성 |
 | 캐시 / 알림 깨우기 | Redis 7 (`ioredis`) | 메타데이터 캐시, 롱 폴링 대기자를 깨우는 Pub/Sub |
@@ -183,7 +183,7 @@ sequenceDiagram
 
 ## Components and Interfaces
 
-모든 Route Handler는 `export const runtime = 'nodejs'`, `export const dynamic = 'force-dynamic'`을 선언한다.
+Next.js 16은 Cache Components가 기본으로 켜져 있고, 이때 `export const dynamic`은 제거되어 선언하면 오류가 난다. 요청 헤더·쿠키·본문이나 DB에 접근하는 Route Handler는 선언 없이도 요청 시점에 실행되므로 `dynamic`·`runtime`을 선언하지 않는다(`runtime` 기본값은 `nodejs`).
 Next.js 16에서 동적 세그먼트 `params`는 Promise이므로 `const { hash } = await params`로 읽는다.
 인증은 `proxy.ts`가 아니라 각 핸들러의 `withAuth()` 래퍼에서 처리한다. 롱 폴링·블록 업로드처럼 본문과 연결 수명을 직접 다뤄야 하는 경로가 있기 때문이다.
 
